@@ -7,11 +7,15 @@ use serde_yaml;
 use std::collections::HashMap;
 use std::fmt;
 use std::path::PathBuf;
+use serde_yaml::Mapping;
 
 
 type ManifestBuildMatrix = HashMap<String,Vec<Version>>;
 
 type RequirementMap = HashMap<String, Version>;
+
+type ToolMap = HashMap<String, Vec<String>>;
+
 use mustache::MapBuilder;
 use mustache;
 
@@ -68,10 +72,11 @@ pub struct BuildFlavour {
     name: String,
     recipes: RecipeMap,
 }
-#[derive(Debug,PartialEq,PartialOrd, Deserialize)]
+#[derive(Debug,PartialEq, Deserialize)]
+#[serde(untagged)]
 pub enum ExportsInner {
     Tools{tools:Vec<String>},
-    Named(HashMap<String,Vec<String>>),
+    Named(ToolMap),
 }
 
 #[derive(Debug,PartialEq,Deserialize)]
@@ -136,19 +141,30 @@ impl Manifest {
         }
         return Vec::new()
     }
-
-    pub fn exports<I>(&self, key: I) -> Vec<&str> where I: AsRef<str>+PartialEq {
-        key = key.as_ref();
-        if key =="tools" {
-            return self.tools()
-        }
-        if let Some(ExportsInner::Named(dict)) = self.exports {
-            if let Some(list) = dict.get(key) {
-                return list;
-            }
-        }
-        Vec::new()
+    pub fn has_tools(&self) -> bool {
+        if let Some(ExportsInner::Tools{..}) = self.exports {true} else{false}
     }
+    // pub fn export<I>(&self, key: I) -> Vec<&str> where I: AsRef<str>+PartialEq {
+    //     let key = key.as_ref();
+    //     if key =="tools" {
+    //         return self.tools()
+    //     }
+    //     if let Some(ExportsInner::Named(dict)) = &self.exports {
+    //         if let Some(list) = dict.get(key) {
+    //             let rv: Vec<&str> = list.iter().map(|v| v.as_str()).collect();
+    //             return rv
+    //         }
+    //     }
+    //     Vec::new()
+    // }
+    // pub fn export_keys(&self) -> Vec<&str> {
+    //     let mut keys = Vec::new();
+    //     if self.has_tools() {
+    //         keys.push("tools");
+    //     }
+
+
+    // } 
     /// Retrieve the flavors defined in the manifest.
     pub fn flavors(&self) -> Result<Vec<String>, AnyError> {
         let mut flavors = Vec::new();
