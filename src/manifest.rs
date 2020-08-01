@@ -15,6 +15,13 @@ type RequirementMap = HashMap<String, Version>;
 use mustache::MapBuilder;
 use mustache;
 
+/// Version models the possible values for a package version. Ideally,
+/// we would treat them all as strings. But, strongly typed languages parsing
+/// yaml sometimes have a say about types.
+/// One annoyance of the parsing performed by serde_yaml is that 
+/// there is no way to coerce a type. I suppose that this is really a 
+/// problem with the yaml spec more than serde. But, for instance 
+/// 7 is an int, 7.1 is a float, and 7.3.2 is a string.  
 #[derive(Debug, PartialEq, PartialOrd, Deserialize)]
 #[serde(untagged)]
 pub enum Version {
@@ -22,6 +29,7 @@ pub enum Version {
     Float(f32),
     Int(u16)
 }
+
 impl fmt::Display for Version {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         // Write strictly the first element into the supplied output
@@ -95,6 +103,7 @@ pub struct Manifest {
 }
 
 impl Manifest {
+    /// Generate a Manifest given its path on disk, assuming it is valid.Otherwise, error.
     pub fn from_path<I>(path: I) -> Result<Manifest, AnyError> where I: Into<PathBuf> {
         let manifest_path = path.into();
         let contents = std::fs::read_to_string(manifest_path)?;
@@ -102,12 +111,32 @@ impl Manifest {
         Ok(manifest)
     }
 
+    /// Generate a Manifest instance from a &str, assuming it is valid. Otherwise, error.
     pub fn from_str<I>(contents: I) -> Result<Manifest, AnyError> where I: AsRef<str> {
         let contents = contents.as_ref();
         let manifest : Manifest = serde_yaml::from_str(contents)?;
         Ok(manifest)
     }
 
+    /// Retrieve the name of the manifest.
+    pub fn name(&self) -> &str {
+        self.name.as_str()
+    }
+
+    /// Retrieve the version of the manifest.
+    pub fn version(&self) -> &str {
+        self.version.as_str()
+    }
+
+    /// Retrieve the tools exported by the manifest.
+    pub fn tools(&self) -> Vec<&str> {
+        if let Some(Tools{ref tools}) = self.exports {
+            return tools.iter().map(|v| v.as_str()).collect::<Vec<&str>>()
+        }
+        return Vec::new()
+    }
+
+    /// Retrieve the flavors defined in the manifest.
     pub fn flavors(&self) -> Result<Vec<String>, AnyError> {
         let mut flavors = Vec::new();
         if self.requires.is_some() || self.recipes.is_some() {
@@ -141,7 +170,8 @@ impl Manifest {
 
         }
         Ok(flavors)
-    } 
+    }
+
     // Iterate over single key
     fn one(template: &str, keys: &Vec<&str>, one: &Vec<&Version>) -> Result<Vec<String>, AnyError> {
         let  mut results = Vec::new();
@@ -155,6 +185,7 @@ impl Manifest {
         }
         Ok(results)
     }
+    
     // iterate over two keys
     fn two(template: &str, keys: &Vec<&str>, one: &Vec<&Version>, two: &Vec<&Version>) -> Result<Vec<String>, AnyError> {
         let  mut results = Vec::new();

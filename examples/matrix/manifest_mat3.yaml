@@ -1,0 +1,50 @@
+---
+schema: 1
+name: foo
+version: 1.2.3
+url: http://www.foo.com/exmaple.html
+documentation: http://docs.foo.com/1.2.3
+summary: Foo language parser
+description:
+  this is a bogus package
+loadRequires:
+  bar: '1.2+<2'
+  bla: 0.2.2+<3
+requires:
+  graphviz: any
+recipes:
+  build:
+    requires:
+      bs: any
+    steps:
+      - do-the-hustle --with=foo
+      - /usr/bin/python doitagain.py
+  test:
+    requires:
+      testup: any
+      ddtesting: 1.2.3..2
+      gtest: 3
+    steps:
+      - buildup --output=bogus
+      - echo i am done
+flavours:
+  - name: maya2012
+    recipes:
+      build:
+        requires:
+          maya: '2012'
+        steps:
+          - pb2 --build --install
+  - name: 'rv{{row.rv}}_py{{row.python}}_for_maya_{{row.maya}}'
+    matrix:
+      rv: ['7.1', '7.2', '7.3']
+      python: [2.7, 3.7, 3.8.4]
+      maya: [2018.sp2, 2019,2020]
+    requires:
+      rv: '{{row.rv}}~'
+      python: '{{row.python}}~'
+      maya: '{{row.maya}}~'
+exports:
+  tools:
+    - bin/foo-bar
+    - bin/bla
