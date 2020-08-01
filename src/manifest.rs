@@ -68,9 +68,10 @@ pub struct BuildFlavour {
     name: String,
     recipes: RecipeMap,
 }
-#[derive(Debug,PartialEq,Deserialize)]
-pub struct Tools {
-    tools: Vec<String>
+#[derive(Debug,PartialEq,PartialOrd, Deserialize)]
+pub enum ExportsInner {
+    Tools{tools:Vec<String>},
+    Named(HashMap<String,Vec<String>>),
 }
 
 #[derive(Debug,PartialEq,Deserialize)]
@@ -99,7 +100,7 @@ pub struct Manifest {
     requires: Option<RequirementMap>,
     recipes: Option<RecipeMap>,
     flavours: Option<Vec<Flavours>>,
-    exports: Option<Tools>
+    exports: Option<ExportsInner>
 }
 
 impl Manifest {
@@ -130,12 +131,24 @@ impl Manifest {
 
     /// Retrieve the tools exported by the manifest.
     pub fn tools(&self) -> Vec<&str> {
-        if let Some(Tools{ref tools}) = self.exports {
+        if let Some(ExportsInner::Tools{ref tools}) = self.exports {
             return tools.iter().map(|v| v.as_str()).collect::<Vec<&str>>()
         }
         return Vec::new()
     }
 
+    pub fn exports<I>(&self, key: I) -> Vec<&str> where I: AsRef<str>+PartialEq {
+        key = key.as_ref();
+        if key =="tools" {
+            return self.tools()
+        }
+        if let Some(ExportsInner::Named(dict)) = self.exports {
+            if let Some(list) = dict.get(key) {
+                return list;
+            }
+        }
+        Vec::new()
+    }
     /// Retrieve the flavors defined in the manifest.
     pub fn flavors(&self) -> Result<Vec<String>, AnyError> {
         let mut flavors = Vec::new();
@@ -185,7 +198,7 @@ impl Manifest {
         }
         Ok(results)
     }
-    
+
     // iterate over two keys
     fn two(template: &str, keys: &Vec<&str>, one: &Vec<&Version>, two: &Vec<&Version>) -> Result<Vec<String>, AnyError> {
         let  mut results = Vec::new();
