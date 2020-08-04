@@ -10,13 +10,20 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     println!("Name: {}", results.name());
     println!("Version: {}", results.version());
+    println!("Exports: {:?}", results.export_keys());
     println!("Flavors:");
 
     let flavs = results.flavors()?;
     flavs.iter().for_each(|v| println!("\t{}", v));
-    println!("Tools:");
-    results.tools().iter().for_each(|t| println!("\t{}",t)); 
-    
+    if let Some(ref mut keys) = results.export_keys() {
+        println!("Exports:");
+        for key in keys {
+            println!("\t{}", key);
+            results.exports_for(key).unwrap().iter().for_each(|t| println!("\t\t{}",t));
+        }
+    }
+ 
+
     Ok(())
 
 }
