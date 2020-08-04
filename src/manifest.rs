@@ -73,6 +73,8 @@ pub struct Tools {
     tools: Vec<String>
 }
 
+type ExportsInner = HashMap<String, Vec<String>>;
+
 #[derive(Debug,PartialEq,Deserialize)]
 #[serde(untagged)]
 pub enum Flavours {
@@ -99,7 +101,7 @@ pub struct Manifest {
     requires: Option<RequirementMap>,
     recipes: Option<RecipeMap>,
     flavours: Option<Vec<Flavours>>,
-    exports: Option<Tools>
+    exports: Option<ExportsInner>
 }
 
 impl Manifest {
@@ -130,12 +132,38 @@ impl Manifest {
 
     /// Retrieve the tools exported by the manifest.
     pub fn tools(&self) -> Vec<&str> {
-        if let Some(Tools{ref tools}) = self.exports {
-            return tools.iter().map(|v| v.as_str()).collect::<Vec<&str>>()
+        if let Some(ref exports) = self.exports {
+            if exports.contains_key("tools") {
+                return exports.get("tools")
+                              .unwrap()
+                              .iter()
+                              .map(|v| v.as_str())
+                              .collect::<Vec<&str>>()
+            }   
         }
         return Vec::new()
     }
 
+    pub fn export_keys(&self) -> Option<std::collections::hash_map::Keys<String,Vec<String>>> {
+        if let Some(ref exports) = self.exports {
+            Some(exports.keys())
+        } else {
+            None
+        }
+    }
+    
+    pub fn exports_for<I>(&self, key:I) -> Option<Vec<&str>> where I: AsRef<str> {
+        let key = key.as_ref();
+        if let Some(ref exports) = self.exports {
+            if exports.contains_key(key){
+                Some(exports.get(key).unwrap().iter().map(|v| v.as_str()).collect::<Vec<&str>>())
+            } else {
+                None
+            }
+        } else {
+            None
+        }
+    }
     /// Retrieve the flavors defined in the manifest.
     pub fn flavors(&self) -> Result<Vec<String>, AnyError> {
         let mut flavors = Vec::new();

@@ -46,3 +46,7 @@ exports:
   tools:
     - bin/foo-bar
     - bin/bla
+  assetbrowser:
+    - ab_extensions.abc.SnapshotExplorer
+    - ab_extensions.abc.ElementTree
+    - ab_extensions.abc.AssetPreview
