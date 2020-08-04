@@ -7,13 +7,12 @@ use serde_yaml;
 use std::collections::HashMap;
 use std::fmt;
 use std::path::PathBuf;
-
+use mustache::MapBuilder;
+use mustache;
 
 type ManifestBuildMatrix = HashMap<String,Vec<Version>>;
 
 type RequirementMap = HashMap<String, Version>;
-use mustache::MapBuilder;
-use mustache;
 
 /// Version models the possible values for a package version. Ideally,
 /// we would treat them all as strings. But, strongly typed languages parsing
@@ -50,7 +49,8 @@ pub struct RecipeInner {
     requires: Option<RequirementMap>,
     #[serde(rename = "loadRequires")]
     load_requires: Option<RequirementMap>,
-    steps: Vec<String>,
+    steps: Option<Vec<String>>,
+    contributors: Option<Vec<String>>,
 }
 
 type RecipeMap = HashMap<String, RecipeInner>;
@@ -60,7 +60,6 @@ type RecipeMap = HashMap<String, RecipeInner>;
 pub struct MatrixFlavour{
     name: String,
     matrix: ManifestBuildMatrix,
-
 }
 
 #[derive(Debug,PartialEq,Deserialize)]
@@ -78,17 +77,48 @@ type ExportsInner = HashMap<String, Vec<String>>;
 #[derive(Debug,PartialEq,Deserialize)]
 #[serde(untagged)]
 pub enum Flavours {
-    Simple{
+    Recipe{
         name: String,
         recipes: RecipeMap,
+        #[serde(rename = "loadRequires")]
+        load_requires: Option<RequirementMap>,
+        #[serde(rename="buildRequires")]
+        build_requires: Option<RequirementMap>,
+        #[serde(rename = "testRequires")]
+        test_requires: Option<RequirementMap>,
+        #[serde(rename="systemRequires")]
+        system_requires: Option<RequirementMap>,
+        supports: Option<Vec<String>>,
+        platforms: Option<Vec<String>>,
+        sites: Option<Vec<String>>,
+    },
+    Simple{
+        name: String,
+        #[serde(rename = "loadRequires")]
+        load_requires: Option<RequirementMap>,
+        #[serde(rename="buildRequires")]
+        build_requires: Option<RequirementMap>,
+        #[serde(rename = "testRequires")]
+        test_requires: Option<RequirementMap>,
+        #[serde(rename="systemRequires")]
+        system_requires: Option<RequirementMap>, 
+        supports: Option<Vec<String>>,
+        platforms: Option<Vec<String>>,
+        sites: Option<Vec<String>>,
     },
     Matrix{
         name: String,
         matrix: ManifestBuildMatrix,
         requires: Option<RequirementMap>,
         #[serde(rename = "loadRequires")]
-        load_requires: Option<RequirementMap>
-    
+        load_requires: Option<RequirementMap>,
+        #[serde(rename = "testRequires")]
+        test_requires: Option<RequirementMap>,
+        #[serde(rename="buildRequires")]
+        build_requires: Option<RequirementMap>,
+        #[serde(rename="systemRequires")]
+        system_requires: Option<RequirementMap>,
+        supports: Option<Vec<String>>,
     }
 }
 
@@ -96,9 +126,18 @@ pub enum Flavours {
 pub struct Manifest {
     name: String,
     version: String,
+    supports: Option<Vec<String>>,
     #[serde(rename = "loadRequires")]
     load_requires: Option<RequirementMap>,
+    #[serde(rename="buildRequires")]
+    build_requires: Option<RequirementMap>,
+    #[serde(rename = "testRequires")]
+    test_requires: Option<RequirementMap>,
+    #[serde(rename="systemRequires")]
+    system_requires: Option<RequirementMap>,
     requires: Option<RequirementMap>,
+    platforms: Option<Vec<String>>,
+    sites: Option<Vec<String>>,
     recipes: Option<RecipeMap>,
     flavours: Option<Vec<Flavours>>,
     exports: Option<ExportsInner>
@@ -173,7 +212,8 @@ impl Manifest {
         if let Some(ref flavs) = self.flavours {
             for fl in flavs {
                     match fl {
-                    Flavours::Simple{name,..} => flavors.push(name.to_string()),
+                    Flavours::Recipe{name,..} => flavors.push(name.to_string()),
+                    Flavours::Simple{name,..}=> flavors.push(name.to_string()),
                     Flavours::Matrix{name,matrix,..} => {
                         let mut par = Vec::new();
                         let mut keys =Vec::new();
@@ -195,7 +235,6 @@ impl Manifest {
                 
                 }
             }
-
         }
         Ok(flavors)
     }
